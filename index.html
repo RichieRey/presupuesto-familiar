@@ -191,6 +191,67 @@ select.fs:focus{outline:none;border-color:var(--blue)}
   .sfc{grid-template-columns:1fr}.g2{grid-template-columns:1fr}
   .bw-grid{grid-template-columns:1fr}
 }
+/* MOBILE */
+#mob-bar{display:none}
+#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9}
+@media(max-width:640px){
+  #mob-bar{display:flex;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;height:48px;background:var(--sb);padding:0 14px;z-index:20;border-bottom:1px solid rgba(255,255,255,.06)}
+  #mob-title{color:#F1F5F9;font-size:13px;font-weight:700;flex:1}
+  #mob-yr{color:#94A3B8;font-size:12px}
+  #ham-btn{background:none;border:none;color:#F1F5F9;font-size:22px;cursor:pointer;padding:4px;line-height:1;display:flex;align-items:center;justify-content:center;width:36px;height:36px}
+  #sb{transform:translateX(-100%);transition:transform .25s ease;z-index:15;width:200px!important;min-width:200px!important}
+  #sb.open{transform:translateX(0)}
+  #sb-overlay.open{display:block}
+  #main{margin-left:0!important;padding:58px 12px 14px!important}
+  .sg{grid-template-columns:repeat(2,1fr)!important}
+  .g2{grid-template-columns:1fr!important}
+  .cg{grid-template-columns:1fr!important}
+  .sfc{grid-template-columns:1fr!important}
+  .bw-grid{grid-template-columns:1fr!important}
+  .ph h2{font-size:17px!important}
+  .ph{flex-direction:column;align-items:flex-start!important;gap:8px!important}
+  .ph .acts{flex-wrap:wrap;gap:6px!important}
+  .btn{font-size:11.5px!important;padding:6px 10px!important}
+  .tv th,.tv td{font-size:10px!important}
+  .tc{width:60px!important;font-size:10px!important}
+  .fr{grid-template-columns:1fr 120px!important}
+}
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  #sb,#toast,.ph .acts,.btn,.sbb,.gh .ti,.info-bar{display:none!important}
+  #main{margin-left:0!important;padding:8px 12px!important}
+  body{background:#fff!important;color:#000!important;font-size:11px!important}
+  .card{box-shadow:none!important;border:1px solid #E2E8F0!important;padding:10px!important;margin-bottom:8px!important;break-inside:avoid}
+  .sc{box-shadow:none!important;border:1px solid #E2E8F0!important;padding:10px!important}
+  .sc .sv{font-size:14px!important}
+  .sg{grid-template-columns:repeat(4,1fr)!important;gap:6px!important;margin-bottom:8px!important}
+  .sfc{grid-template-columns:1fr 1fr!important;gap:6px!important;margin-bottom:8px!important}
+  .sf{padding:8px!important}
+  .g2{grid-template-columns:38% 62%!important;gap:8px!important}
+  .fr{padding:2px 0!important}
+  .fr input{border:none!important;background:none!important;padding:0!important;text-align:right;font-size:11px!important}
+  .fr label{font-size:11px!important}
+  .rt{padding-top:6px!important;margin-top:4px!important;font-size:12px!important}
+  .gh{padding:4px 0 1px!important}
+  .gn{font-size:9px!important}
+  .at{font-size:9px!important;width:100%!important}
+  .at th,.at td{padding:3px 5px!important}
+  .atw{overflow:visible!important}
+  .ph h2{font-size:15px!important;margin-bottom:6px!important}
+  .ph{margin-bottom:8px!important}
+  #print-header{display:block!important}
+  .tv-wrap{overflow:visible!important}
+  .tv{font-size:8px!important}
+  .tc{font-size:8px!important;border:none!important;background:none!important}
+  .pos{color:#16A34A!important}
+  .neg{color:#DC2626!important}
+  .cg{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .cc canvas{max-height:180px!important}
+  @page{margin:1.2cm;size:A4}
+}
+#print-header{display:none;text-align:center;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #1E293B}
+#print-header h1{font-size:18px;font-weight:700;color:#1E293B}
+#print-header p{font-size:11px;color:#64748B;margin-top:3px}
 /* DRIVE */
 .drive-btn{display:flex;align-items:center;gap:7px;width:100%;padding:7px 14px;background:none;border:none;color:#94A3B8;cursor:pointer;font-size:11.5px;text-align:left;transition:background .1s}
 .drive-btn:hover{background:var(--sbh);color:#F1F5F9}
@@ -255,7 +316,19 @@ select.fs:focus{outline:none;border-color:var(--blue)}
   </nav>
 </div>
 
-<div id="main"><div id="content"></div></div>
+<div id="mob-bar">
+  <button id="ham-btn" onclick="toggleSB()" aria-label="Menú">☰</button>
+  <span id="mob-title">💰 Presupuesto Familiar</span>
+  <span id="mob-yr"></span>
+</div>
+<div id="sb-overlay" onclick="closeSB()"></div>
+<div id="main">
+  <div id="print-header">
+    <h1>💰 Presupuesto Familiar · RGJ</h1>
+    <p id="print-subtitle">Reporte generado el <span id="print-date"></span></p>
+  </div>
+  <div id="content"></div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -358,7 +431,7 @@ function fPct(n){return(+n||0).toFixed(1)+'%';}
 function fShort(n){const v=Math.abs(Math.round(+n||0));return(n<0?'-':'')+'$'+(v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?(v/1000).toFixed(0)+'K':v.toLocaleString('es-CO'));}
 
 // ── VIEW ──────────────────────────────────────────────────────────────────
-function setView(v){V=v;renderSB();renderC();}
+function setView(v){V=v;renderSB();renderC();if(window.innerWidth<=640)closeSB();}
 function changeYear(d){D.year=(D.year||2025)+d;saveD(true);renderSB();renderC();}
 
 function renderSB(){
@@ -378,6 +451,7 @@ function renderSB(){
     const el=document.getElementById(`btn-${k}`);
     if(el)el.className=V===k?'active':'';
   });
+  updateMobYr();
   // Year dropdown options
   const yd=document.getElementById('yr-dropdown');
   if(yd&&yd.classList.contains('open')){
@@ -490,6 +564,7 @@ function renderMV(m,el){
       <div class="acts">
         ${m>0?`<button class="btn btn-y" onclick="copyPrev(${m})">📋 Copiar ${MN[m-1]}</button>`:'<button class="btn btn-y" disabled>📋 Copiar anterior</button>'}
         <button class="btn btn-r" onclick="clearMonth(${m})">🗑 Limpiar mes</button>
+        <button class="btn btn-g" onclick="printView('${MN[m]} ${D.year||2025}')">🖨️ Imprimir</button>
       </div>
     </div>
     <div class="sg" id="sg-${m}">${scH(c,aS)}</div>
@@ -627,6 +702,7 @@ function renderTV(el){
   el.innerHTML=`
     <div class="ph"><h2>Vista Tabla ${D.year||2025}</h2>
       <div class="acts">
+        <button class="btn btn-g" onclick="printView('Vista Tabla '+D.year)">🖨️ Imprimir</button>
         <select id="copy-src" class="fs" style="font-size:12px">
           ${MN.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}
         </select>
@@ -746,7 +822,8 @@ function renderAV(el){
   const annAvail=an.ti>0?an.sal/an.ti*100:0;
 
   el.innerHTML=`
-    <div class="ph"><h2>Resumen Anual ${D.year||2025}</h2></div>
+    <div class="ph"><h2>Resumen Anual ${D.year||2025}</h2>
+      <div class="acts"><button class="btn btn-g" onclick="printView('Resumen Anual '+D.year)">🖨️ Imprimir</button></div></div>
     <div class="sg">
       <div class="sc"><div class="sl">💵 Total Ingresos</div><div class="sv pos">${fCOP(an.ti)}</div></div>
       <div class="sc"><div class="sl">💸 Total Gastos</div><div class="sv">${fCOP(an.tg)}</div><div class="ss">${fPct(annPct)} del ingreso</div></div>
@@ -797,7 +874,8 @@ function renderAnV(el){
   const monthOpts=MN.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
 
   el.innerHTML=`
-    <div class="ph"><h2>Análisis Financiero ${D.year||2025}</h2></div>
+    <div class="ph"><h2>Análisis Financiero ${D.year||2025}</h2>
+      <div class="acts"><button class="btn btn-g" onclick="printView('Análisis Financiero '+D.year)">🖨️ Imprimir</button></div></div>
     ${best&&worst?`<div class="bw-grid">
       <div class="bw-card" style="background:#F0FDF4;border-color:#BBF7D0">
         <div style="font-size:10px;color:#16A34A;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🏆 Mejor mes</div>
@@ -1164,6 +1242,35 @@ async function saveToDrive(){
 function scheduleSave(){
   if(syncTimer)clearTimeout(syncTimer);
   syncTimer=setTimeout(()=>saveToDrive(),3000);
+}
+
+// ── MOBILE MENU ────────────────────────────────────────────────────────────
+function toggleSB(){
+  const sb=document.getElementById('sb');
+  const ov=document.getElementById('sb-overlay');
+  const isOpen=sb.classList.toggle('open');
+  ov.classList.toggle('open',isOpen);
+  document.getElementById('ham-btn').textContent=isOpen?'✕':'☰';
+}
+function closeSB(){
+  document.getElementById('sb').classList.remove('open');
+  document.getElementById('sb-overlay').classList.remove('open');
+  document.getElementById('ham-btn').textContent='☰';
+}
+// Update mobile year display
+function updateMobYr(){
+  const el=document.getElementById('mob-yr');
+  if(el)el.textContent=D.year||2025;
+}
+
+// ── PRINT ─────────────────────────────────────────────────────────────────
+function printView(title){
+  const sub=document.getElementById('print-subtitle');
+  const dateEl=document.getElementById('print-date');
+  if(dateEl)dateEl.textContent=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+  document.title=`Presupuesto · ${title}`;
+  window.print();
+  document.title='Presupuesto Familiar · RGJ';
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
