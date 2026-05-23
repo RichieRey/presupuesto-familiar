@@ -322,7 +322,7 @@ function loadD(){
 function saveD(silent){
   try{localStorage.setItem('pf_rgj_v2',JSON.stringify(D));}
   catch(e){toast('Error al guardar');}
-  if(!silent)scheduleSave();
+  scheduleSave();
 }
 
 // ── CALCULATIONS ──────────────────────────────────────────────────────────
