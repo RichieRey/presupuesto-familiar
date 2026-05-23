@@ -54,8 +54,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 /* THEME TOGGLE */
 .theme-toggle{display:flex;align-items:center;margin:6px 10px 10px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
 .theme-btn{flex:1;padding:6px 4px;border:none;background:none;cursor:pointer;font-size:11px;color:#94A3B8;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px}
-.theme-btn.active{background:#1D4ED8;color:#fff!important;font-weight:600}
-.theme-btn:not(.active):hover{background:var(--sbh)}
+.theme-btn.active{background:#1D4ED8!important;color:#fff!important;font-weight:600;border-color:#1D4ED8!important}
+.theme-btn:not(.active):hover{background:var(--sbh)!important}
 
 /* MAIN */
 #main{margin-left:175px;flex:1;padding:18px;min-height:100vh}
@@ -236,10 +236,11 @@ select.fs:focus{outline:none;border-color:var(--blue)}
     <div class="div"></div>
     <div class="theme-toggle">
       <button class="theme-btn active" id="theme-dark" onclick="setTheme('dark')">🌙 Oscuro</button>
-      <button class="theme-btn" id="theme-light" onclick="setTheme('light')" style="display:flex;align-items:center;justify-content:center;gap:5px">
-        ☀️ Claro
-        <input type="color" id="theme-color" value="#334155" title="Personalizar color"
-          style="width:14px;height:14px;border:none;border-radius:3px;cursor:pointer;padding:0;background:none;flex-shrink:0"
+      <button class="theme-btn" id="theme-light" onclick="setTheme('light')"
+        style="position:relative;overflow:hidden">
+        🎨 Custom
+        <input type="color" id="theme-color" value="#334155"
+          style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none"
           onclick="event.stopPropagation()"
           oninput="applyCustomColor(this.value)">
       </button>
@@ -319,7 +320,7 @@ function loadD(){
 }
 
 function saveD(silent){
-  try{localStorage.setItem('pf_rgj_v2',JSON.stringify(D));if(!silent)toast('Guardado ✓');}
+  try{localStorage.setItem('pf_rgj_v2',JSON.stringify(D));}
   catch(e){toast('Error al guardar');}
   if(!silent)scheduleSave();
 }
@@ -1154,6 +1155,7 @@ async function saveToDrive(){
     form.append('file',new Blob([body],{type:'application/json'}));
     await driveReq(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`,{method:'PATCH',body:form});
     setDriveStatus('connected');
+    toast('Guardado en Drive ✓');
   }catch(e){setDriveStatus('error','Error al guardar');}
 }
 
