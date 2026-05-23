@@ -244,6 +244,13 @@ select.fs:focus{outline:none;border-color:var(--blue)}
           oninput="applyCustomColor(this.value)">
       </button>
     </div>
+    <div style="padding:6px 14px 10px;text-align:center">
+      <button onclick="resetAll()" style="background:none;border:1px solid rgba(255,255,255,.08);color:#475569;font-size:10px;cursor:pointer;padding:4px 12px;border-radius:5px;width:100%;transition:all .15s"
+        onmouseenter="this.style.color='#EF4444';this.style.borderColor='rgba(239,68,68,.3)'"
+        onmouseleave="this.style.color='#475569';this.style.borderColor='rgba(255,255,255,.08)'">
+        🗑 Resetear todo
+      </button>
+    </div>
   </nav>
 </div>
 
@@ -911,6 +918,17 @@ function renderCharts(){
 }
 
 // ── EXPORT / IMPORT ────────────────────────────────────────────────────────
+function resetAll(){
+  const r1=confirm('¿Borrar TODOS los datos del presupuesto?\nEsta acción no se puede deshacer.');
+  if(!r1)return;
+  const r2=confirm('¿Estás seguro? Se borrarán los 12 meses de todos los años.');
+  if(!r2)return;
+  const empty={year:new Date().getFullYear(),ai:0,months:{}};
+  for(let m=0;m<12;m++) empty.months[m]=emptyM();
+  localStorage.setItem('pf_rgj_v2',JSON.stringify(empty));
+  location.reload();
+}
+
 function exportData(){
   const b=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});
   const u=URL.createObjectURL(b);
