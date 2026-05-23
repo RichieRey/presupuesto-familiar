@@ -320,8 +320,10 @@ function loadD(){
 }
 
 function saveD(silent){
-  try{localStorage.setItem('pf_rgj_v2',JSON.stringify(D));}
-  catch(e){toast('Error al guardar');}
+  try{
+    localStorage.setItem('pf_rgj_v2',JSON.stringify(D));
+    if(!silent) toast('Guardado ✓');
+  }catch(e){toast('Error al guardar');}
   scheduleSave();
 }
 
@@ -529,7 +531,7 @@ function sfH(s1,s2,c){
 // ── IN-PLACE UPDATE ────────────────────────────────────────────────────────
 function upd(m,type,idx,val){
   D.months[m][type][idx]=parseFloat(val)||0;
-  saveD(true);
+  saveD(false);
   const c=cm(m);const aS=acc(m);
   const sg=document.getElementById(`sg-${m}`);if(sg)sg.innerHTML=scH(c,aS);
   const sf=document.getElementById(`sf-${m}`);if(sf)sf.innerHTML=sfH(sfGF(c.pd),sfID(c.pav),c);
@@ -664,7 +666,7 @@ function renderTV(el){
 // Table-view update (lighter, just save + update totals in table)
 function updTV(m,type,idx,val){
   D.months[m][type][idx]=parseFloat(val)||0;
-  saveD(true);
+  saveD(false);
   // Update total rows in table
   refreshTVTotals();
   renderSB();
@@ -1155,7 +1157,7 @@ async function saveToDrive(){
     form.append('file',new Blob([body],{type:'application/json'}));
     await driveReq(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`,{method:'PATCH',body:form});
     setDriveStatus('connected');
-    toast('Guardado en Drive ✓');
+    toast('☁️ Sincronizado con Drive ✓');
   }catch(e){setDriveStatus('error','Error al guardar');}
 }
 
