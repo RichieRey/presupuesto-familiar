@@ -11,7 +11,9 @@
 <link rel="manifest" href="manifest.json">
 <title>Presupuesto Familiar · RGJ</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -294,7 +296,7 @@ select.fs:focus{outline:none;border-color:var(--blue)}
     <a href="#" onclick="setView('analysis');return false" id="btn-analysis"><span>📈</span>Análisis</a>
     <div class="div"></div>
     <button class="drive-btn" id="drive-btn" onclick="handleDriveClick()">
-      <span id="drive-icon">☁️</span><span id="drive-label">Conectar Google Drive</span>
+      <span id="drive-icon">☁️</span><span id="drive-label">Conectar cuenta</span>
     </button>
     <div class="drive-status"><span class="ds-dot" id="ds-dot" style="background:#334155"></span><span class="ds-txt" id="ds-txt">Sin conexión</span></div>
     <button class="sbb" onclick="exportData()"><span>⬇</span>Exportar JSON</button>
@@ -1117,46 +1119,60 @@ function initTheme(){
 }
 
 
-// ── GOOGLE DRIVE SYNC ──────────────────────────────────────────────────────
-const CLIENT_ID='668930269753-8qvida9c3s1ureldvr5etmcgoeg0o3uh.apps.googleusercontent.com';
-const SCOPES='https://www.googleapis.com/auth/drive.file';
-const FILENAME='presupuesto_rgj.json';
-let gToken=null,driveFileId=null,syncTimer=null,tokenClient=null;
+// ── FIREBASE (Auth + Firestore) ─────────────────────────────────────────────
+// ⚠️ Reemplaza con la config de TU proyecto Firebase:
+// Firebase Console → ⚙️ Configuración del proyecto → "Tus apps" → SDK setup and configuration → Config
+const firebaseConfig={
+  apiKey:"AIzaSyB-QmxyxEz95CPa0LuerOmk2FLi-uty06o",
+  authDomain:"presupuesto-familiar-bf83b.firebaseapp.com",
+  projectId:"presupuesto-familiar-bf83b",
+  storageBucket:"presupuesto-familiar-bf83b.firebasestorage.app",
+  messagingSenderId:"501062346287",
+  appId:"1:501062346287:web:0eae0a1ab7130b4ccd88da"
+};
+firebase.initializeApp(firebaseConfig);
+const fsAuth=firebase.auth();
+const fsDb=firebase.firestore();
+try{fsDb.enablePersistence({synchronizeTabs:true});}catch(e){console.warn('Persistencia offline no disponible:',e);}
+const BUDGET_DOC=fsDb.collection('budget').doc('rgj'); // un solo documento, compartido entre los dos
+let syncTimer=null,unsubBudget=null,firstSnapshot=true;
 
-function initDrive(){
-  const saved=localStorage.getItem('pf_drive_token');
-  const fileId=localStorage.getItem('pf_drive_file_id');
-  if(saved){gToken=saved;driveFileId=fileId||null;setDriveStatus('connected');}
-  window.google&&initTokenClient();
-}
+fsAuth.onAuthStateChanged(user=>{
+  if(unsubBudget){unsubBudget();unsubBudget=null;}
+  if(user){
+    setDriveStatus('syncing');
+    firstSnapshot=true;
+    unsubBudget=BUDGET_DOC.onSnapshot(snap=>{
+      if(snap.metadata.hasPendingWrites)return; // eco de nuestra propia escritura: ignorar
+      if(snap.exists){
+        D=snap.data();
+        for(let m=0;m<12;m++)if(!D.months[m])D.months[m]=emptyM();
+        saveD(true);
+        renderSB();renderC();
+        if(!firstSnapshot)toast('☁️ Actualizado');
+      }else if(firstSnapshot){
+        // Primera conexión y el documento no existe: sembrar con lo que ya hay en este dispositivo
+        BUDGET_DOC.set(D).catch(e=>console.error(e));
+      }
+      firstSnapshot=false;
+      setDriveStatus('connected');
+    },err=>{setDriveStatus('error','Error Firestore');console.error(err);});
+  }else{
+    setDriveStatus('disconnected');
+  }
+});
 
-function initTokenClient(){
-  tokenClient=google.accounts.oauth2.initTokenClient({
-    client_id:CLIENT_ID,scope:SCOPES,
-    callback:(resp)=>{
-      if(resp.error){setDriveStatus('error','Error de autorización');return;}
-      gToken=resp.access_token;
-      localStorage.setItem('pf_drive_token',gToken);
-      setDriveStatus('syncing');
-      findOrCreateFile();
-    }
+function handleDriveClick(){
+  if(fsAuth.currentUser){disconnectDrive();return;}
+  const provider=new firebase.auth.GoogleAuthProvider();
+  fsAuth.signInWithPopup(provider).catch(e=>{
+    if(e.code!=='auth/popup-closed-by-user')setDriveStatus('error','Error de autorización');
   });
 }
 
-function handleDriveClick(){
-  if(gToken){disconnectDrive();return;}
-  if(!window.google){toast('Cargando Google... intenta de nuevo');return;}
-  if(!tokenClient)initTokenClient();
-  tokenClient.requestAccessToken({prompt:'consent'});
-}
-
 function disconnectDrive(){
-  if(!confirm('¿Desconectar Google Drive?'))return;
-  if(gToken&&window.google)google.accounts.oauth2.revoke(gToken);
-  gToken=null;driveFileId=null;
-  localStorage.removeItem('pf_drive_token');
-  localStorage.removeItem('pf_drive_file_id');
-  setDriveStatus('disconnected');
+  if(!confirm('¿Desconectar tu cuenta?'))return;
+  fsAuth.signOut();
 }
 
 function setDriveStatus(state,msg){
@@ -1166,88 +1182,24 @@ function setDriveStatus(state,msg){
   const icon=document.getElementById('drive-icon');
   if(!dot||!txt||!btn)return;
   const states={
-    disconnected:{c:'#334155',t:'Sin conexión',l:'Conectar Google Drive',i:'☁️'},
-    connected:{c:'#22C55E',t:'Drive conectado',l:'Desconectar Drive',i:'✅'},
-    syncing:{c:'#EAB308',t:'Sincronizando...',l:'Desconectar Drive',i:'🔄'},
+    disconnected:{c:'#334155',t:'Sin conexión',l:'Conectar cuenta',i:'☁️'},
+    connected:{c:'#22C55E',t:'Conectado',l:'Desconectar',i:'✅'},
+    syncing:{c:'#EAB308',t:'Sincronizando...',l:'Desconectar',i:'🔄'},
     error:{c:'#EF4444',t:msg||'Error',l:'Reintentar',i:'⚠️'},
   };
   const s=states[state]||states.disconnected;
   dot.style.background=s.c;txt.textContent=s.t;btn.textContent=s.l;icon.textContent=s.i;
 }
 
-async function driveReq(url,opts={}){
-  if(!gToken)return null;
-  const res=await fetch(url,{...opts,headers:{...opts.headers,'Authorization':`Bearer ${gToken}`}});
-  if(res.status===401){gToken=null;localStorage.removeItem('pf_drive_token');setDriveStatus('disconnected');return null;}
-  return res;
-}
-
-async function findOrCreateFile(){
+function saveToFirestore(){
+  if(!fsAuth.currentUser)return;
   setDriveStatus('syncing');
-  try{
-    const r=await driveReq(`https://www.googleapis.com/drive/v3/files?q=name='${FILENAME}' and trashed=false&fields=files(id,name,modifiedTime)`);
-    if(!r)return;
-    const data=await r.json();
-    if(data.files&&data.files.length>0){
-      driveFileId=data.files[0].id;
-      localStorage.setItem('pf_drive_file_id',driveFileId);
-      await loadFromDrive();
-    }else{
-      await createDriveFile();
-    }
-  }catch(e){setDriveStatus('error','Error de conexión');}
-}
-
-async function loadFromDrive(){
-  if(!driveFileId)return;
-  try{
-    const r=await driveReq(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`);
-    if(!r)return;
-    const data=await r.json();
-    D=data;
-    for(let m=0;m<12;m++)if(!D.months[m])D.months[m]=emptyM();
-    saveD(true);
-    renderSB();renderC();
-    setDriveStatus('connected');
-    toast('Datos cargados desde Drive ✓');
-  }catch(e){setDriveStatus('error','Error al cargar');}
-}
-
-async function createDriveFile(){
-  try{
-    const body=JSON.stringify(D);
-    const meta=JSON.stringify({name:FILENAME,mimeType:'application/json'});
-    const form=new FormData();
-    form.append('metadata',new Blob([meta],{type:'application/json'}));
-    form.append('file',new Blob([body],{type:'application/json'}));
-    const r=await driveReq('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',body:form});
-    if(!r)return;
-    const data=await r.json();
-    driveFileId=data.id;
-    localStorage.setItem('pf_drive_file_id',driveFileId);
-    setDriveStatus('connected');
-    toast('Archivo creado en Drive ✓');
-  }catch(e){setDriveStatus('error','Error al crear archivo');}
-}
-
-async function saveToDrive(){
-  if(!gToken||!driveFileId){scheduleSave();return;}
-  setDriveStatus('syncing');
-  try{
-    const body=JSON.stringify(D);
-    const meta=JSON.stringify({name:FILENAME});
-    const form=new FormData();
-    form.append('metadata',new Blob([meta],{type:'application/json'}));
-    form.append('file',new Blob([body],{type:'application/json'}));
-    await driveReq(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`,{method:'PATCH',body:form});
-    setDriveStatus('connected');
-    toast('☁️ Sincronizado con Drive ✓');
-  }catch(e){setDriveStatus('error','Error al guardar');}
+  BUDGET_DOC.set(D).then(()=>{setDriveStatus('connected');}).catch(e=>{setDriveStatus('error','Error al guardar');console.error(e);});
 }
 
 function scheduleSave(){
   if(syncTimer)clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>saveToDrive(),3000);
+  syncTimer=setTimeout(()=>saveToFirestore(),3000);
 }
 
 // ── MOBILE MENU ────────────────────────────────────────────────────────────
@@ -1280,7 +1232,7 @@ function printView(title){
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
-loadD();renderSB();renderC();initTheme();initDrive();
+loadD();renderSB();renderC();initTheme();
 
 // Register Service Worker
 if('serviceWorker' in navigator){
