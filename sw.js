@@ -1,4 +1,4 @@
-const CACHE='presupuesto-rgj-v1';
+const CACHE='presupuesto-rgj-v2';
 const ASSETS=[
   '/presupuesto-familiar/',
   '/presupuesto-familiar/index.html',
@@ -17,8 +17,8 @@ self.addEventListener('activate',e=>{
 });
 
 self.addEventListener('fetch',e=>{
-  // Network first para Drive API, cache first para el resto
-  if(e.request.url.includes('googleapis.com')||e.request.url.includes('accounts.google.com')){
+  // Network first para Firebase/Google APIs, cache first para el resto
+  if(e.request.url.includes('googleapis.com')||e.request.url.includes('accounts.google.com')||e.request.url.includes('firebaseapp.com')||e.request.url.includes('firebaseio.com')){
     e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
   } else {
     e.respondWith(
