@@ -1166,6 +1166,7 @@ function handleDriveClick(){
   if(fsAuth.currentUser){disconnectDrive();return;}
   const provider=new firebase.auth.GoogleAuthProvider();
   fsAuth.signInWithPopup(provider).catch(e=>{
+    console.error('Firebase auth error:',e.code,e.message,e);
     if(e.code!=='auth/popup-closed-by-user')setDriveStatus('error','Error de autorización');
   });
 }
